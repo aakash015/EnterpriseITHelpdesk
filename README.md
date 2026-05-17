@@ -404,7 +404,7 @@ Object Manager
 → Validation Rules
 → New
 ```
-
+![alt text](./imageAsset/image.png)
 ### Rule
 
 ```sql
