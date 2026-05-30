@@ -1,507 +1,618 @@
-# ITSM Enterprise Salesforce Project — Current Progress
+# Internal IT Support Ticketing System — Current Progress
 
-## Project Initialization
+## Project Overview
 
-### Repository & Branch Setup
+We are building a pure Salesforce-based Internal IT Support Ticketing System using:
 
-```bash
-git checkout -b feature/incident-object
+- Salesforce Custom Objects
+- Queues
+- Flows
+- Apex
+- Quick Actions
+- Console Navigation
+- Hybrid UI Architecture
 
-git checkout -b feature/security-model
-
-git checkout -b feature/lwc-dashboard
-```
-
-### Org Authorized
-
-- Salesforce Org authenticated successfully
-- Development environment connected
+The system is designed incrementally, avoiding overengineering and introducing features only when needed.
 
 ---
 
-# IMPLEMENTED DATA MODEL
+# Current Architecture
 
-## OBJECT 1 — Vendor__c
+## Application Type
 
-### Purpose
+Internal IT Support System
 
-External vendor management:
+Employees can:
+- create support tickets
+- view their own tickets
 
-- Dell
-- Lenovo
-- HP
-- AWS Support
-- External Infra Teams
-
-### Fields
-
-| Field | Type |
-|---|---|
-| Name | Text |
-| Vendor_Code__c | Text |
-| Support_Email__c | Email |
-| Support_Number__c | Phone |
-| SLA_Level__c | Picklist |
-| Active__c | Checkbox |
+Support agents can:
+- work on queue tickets
+- assign tickets to themselves
+- update ticket status
 
 ---
 
-## OBJECT 2 — Asset__c
+# Core Object Created
 
-### Purpose
+## `Ticket__c`
 
-Tracks enterprise assets:
-
-- Laptops
-- Devices
-- Servers
-- Applications
-- Infrastructure Assets
-
-### Fields
-
-| Field | Type |
-|---|---|
-| Asset_Tag__c | Auto Number |
-| Asset_Name__c | Text |
-| Asset_Type__c | Picklist |
-| Serial_Number__c | Text |
-| Warranty_Expiry__c | Date |
-| Vendor__c | Lookup(Vendor__c) |
-| Assigned_To__c | Lookup(User) |
-| Status__c | Picklist |
+Custom object used for handling internal support tickets.
 
 ---
 
-## OBJECT 3 — Major_Incident__c
-
-### Purpose
-
-Enterprise-level incident grouping.
-
-### Example
-
-VPN outage affecting 200 employees
-
-### Fields
+# Fields Implemented
 
 | Field | Type |
 |---|---|
-| Major_Incident_Number__c | Auto Number |
+| Name | Auto Number |
 | Title__c | Text |
-| Description__c | Long Text |
-| Status__c | Picklist |
-| Priority__c | Picklist |
-| Root_Cause__c | Long Text |
-| Resolution__c | Long Text |
-| Started_At__c | DateTime |
-| Resolved_At__c | DateTime |
-| Incident_Count__c | Number |
-| Incident_Commander__c | Lookup(User) |
-
----
-
-## OBJECT 4 — Incident__c
-
-### Purpose
-
-Core ITSM workflow entity.
-
-### Fields
-
-| Field | Type |
-|---|---|
-| Incident_Number__c | Auto Number |
-| Subject__c | Text |
-| Description__c | Long Text |
+| Description__c | Long Text Area |
 | Status__c | Picklist |
 | Priority__c | Picklist |
 | Category__c | Picklist |
-| Sub_Category__c | Picklist |
-| SLA_Due_Date__c | DateTime |
-| SLA_Breached__c | Checkbox |
-| Resolution_Notes__c | Long Text |
-| Root_Cause__c | Long Text |
-| Resolved_Date__c | DateTime |
-| Vendor__c | Lookup(Vendor__c) |
-| Asset__c | Lookup(Asset__c) |
-| Major_Incident__c | Lookup(Major_Incident__c) |
-| Assigned_To__c | Lookup(User) |
 
 ---
 
-# Important Design Decision
+# Picklist Values
 
-## Ownership Model
+## Status
 
-Initially:
+- Open
+- In Progress
+- Closed
+
+---
+
+## Priority
+
+- Low
+- Medium
+- High
+
+---
+
+## Category
+
+- Hardware
+- Software
+- Access
+- Network
+- Other
+
+---
+
+# Console Application
+
+Created:
+
+## `IT Support Console`
+
+Using:
+- Console Navigation
+
+This provides a workspace-oriented support experience.
+
+---
+
+# Queue Architecture
+
+## Queue Created
+
+`IT Support Queue`
+
+---
+
+# What Are Queues in Salesforce?
+
+Queues are shared work containers where records can wait until someone from a team picks them up.
+
+Instead of assigning tickets directly to users:
 
 ```text
-Owner = Queue
+Ticket → Queue → Agent Picks Ticket
 ```
 
-NOT engineer assignment directly.
-
-### Why?
-
-Enterprise ITSM systems operate using queue-driven intake and triage models.
-
-### Benefits
-
-- Centralized triage
-- Better SLA management
-- Controlled assignment lifecycle
-- Easier escalation workflows
+The queue temporarily owns the ticket using Salesforce standard `OwnerId`.
 
 ---
 
-## OBJECT 5 — Incident_Team_Member__c
+# Why We Used Queues
 
-### Purpose
+Queues provide multiple enterprise advantages:
 
-Provides:
+## 1. Centralized Work Management
 
-Incident ↔ User Collaboration
+All unassigned tickets appear in one place.
 
-with:
+Example:
+- Hardware issues
+- Software requests
+- Access problems
 
-- Role-based access
-- Sharing
-- Visibility
-- Collaboration lifecycle
-
-### Inspired By
-
-- Opportunity Teams
-- Account Teams
-- Case Teams
-
-### Fields
-
-| Field | Type |
-|---|---|
-| Incident__c | Master Detail |
-| User__c | Lookup(User) |
-| Team_Role__c | Picklist |
-| Access_Level__c | Picklist |
-| Active__c | Checkbox |
-| Joined_At__c | DateTime |
-| Left_At__c | DateTime |
-
-### Team Roles
-
-- Incident Commander
-- Senior Engineer
-- QA Reviewer
-- Vendor Coordinator
-- Security Reviewer
-- IT Manager
+can all be visible to support agents.
 
 ---
 
-# Incident Team Sharing Architecture
+## 2. Better Scalability
 
-## OWD Configuration
+Without queues:
 
 ```text
-Incident__c = Private
+Ticket → Direct User Assignment
 ```
 
-## Sharing Flow
+becomes difficult to manage at scale.
+
+With queues:
 
 ```text
-Incident Team Member Created
-        ↓
-Trigger Fires
-        ↓
-Sharing Service Executes
-        ↓
-Incident__Share Inserted
-        ↓
-Collaborator Gains Access
+Ticket → Shared Queue
+→ Best available agent picks ticket
 ```
 
-## Apex Sharing Reason
+This is far more maintainable.
 
-Custom sharing reason created:
+---
+
+## 3. Future AI Compatibility
+
+Queue-based systems work extremely well with:
+- AI triage
+- Agentforce automation
+- workload balancing
+- intelligent routing
+- escalations
+
+because tickets remain unassigned until processed.
+
+---
+
+## 4. Cleaner Ownership Model
+
+Current ownership lifecycle:
 
 ```text
-Incident_Team_Access__c
+New Ticket
+→ Owner = IT Support Queue
+
+Agent clicks "Assign To Me"
+→ Owner = Support Agent
 ```
 
-### Importance
+This uses Salesforce-native ownership architecture.
 
-Enables:
-
-- Safe access removal
-- Collaboration isolation
-- Controlled sharing lifecycle
-- Enterprise-grade record access management
+No custom assignment fields were required.
 
 ---
 
-## OBJECT 6 — Asset_Request__c
+# Security Model
 
-### Purpose
+## Visibility Rules
 
-Approval-driven procurement/request flow.
+Employees:
+- can view only their own tickets
 
-### Fields
+Support agents:
+- can view queue tickets
+- can work assigned tickets
 
-| Field | Type |
-|---|---|
-| Request_Number__c | Auto Number |
-| Asset__c | Lookup |
-| Requested_By__c | Lookup(User) |
-| Cost__c | Currency |
-| Justification__c | Long Text |
-| Approval_Status__c | Picklist |
-| Security_Review_Required__c | Checkbox |
+Admins:
+- full visibility
 
 ---
 
-## OBJECT 7 — SLA_Log__c
+# Automation Implemented
 
-### Purpose
+## Record-Triggered Flow
 
-Tracks:
+Created flow:
 
-- SLA timings
-- Breach history
-- Audit trail
+```text
+On Ticket Creation
+→ Assign OwnerId to IT Support Queue
+```
 
-### Fields
-
-| Field | Type |
-|---|---|
-| Incident__c | Lookup |
-| SLA_Start__c | DateTime |
-| SLA_End__c | DateTime |
-| Breached__c | Checkbox |
-| Resolution_Time_Minutes__c | Number |
+This ensures every new ticket automatically enters the support queue.
 
 ---
 
-## OBJECT 8 — Escalation_Log__c
+# Assign To Me Feature
 
-### Purpose
+Implemented using:
 
-Tracks escalation history.
-
-### Fields
-
-| Field | Type |
-|---|---|
-| Incident__c | Lookup |
-| Escalated_From__c | Lookup(User) |
-| Escalated_To__c | Lookup(User) |
-| Escalation_Level__c | Number |
-| Escalated_At__c | DateTime |
+```text
+Quick Action
+→ Flow
+→ Apex
+```
 
 ---
 
-## OBJECT 9 — Error_Log__c
+# Feature Workflow
 
-### Purpose
+```text
+Agent opens queue ticket
+→ Clicks "Assign To Me"
+→ Apex assigns OwnerId to current user
+→ Status becomes "In Progress"
+→ Flow sends notification email
+```
 
-Enterprise-grade observability and diagnostics.
+---
 
-Used by:
+# Why This Architecture Was Chosen
 
+## Apex Handles
+
+- business logic
+- ownership updates
+- status transitions
+
+---
+
+## Flow Handles
+
+- orchestration
+- notifications
+- configurable automation
+
+This separation creates a clean and scalable Salesforce-native architecture.
+
+---
+
+# Current System Workflow
+
+```text
+Employee creates ticket
+→ Ticket automatically assigned to IT Support Queue
+→ Agents see queue tickets
+→ Agent clicks "Assign To Me"
+→ Ticket assigned to agent
+→ Status changes to In Progress
+→ Email notification sent
+```
+
+---
+
+# Technologies Used So Far
+
+- Salesforce Custom Objects
+- Lightning Console App
+- Queues
+- Flows
+- Apex
+- Quick Actions
+
+---
+
+# Current Status
+
+The project now has a functioning support workflow foundation with:
+- queue-based ticket management
+- automated ownership routing
+- support-agent assignment workflow
+- notification handling
+- enterprise-style console architecture
+
+# Process Automation Settings vs Org-Wide Email Address in Salesforce
+
+Both involve email addresses, but they serve different purposes in Salesforce.
+
+---
+
+# 1. Process Automation Settings Email
+
+Location:
+
+```text
+Setup → Process Automation Settings
+```
+
+This email is mainly used as the default sender email for Salesforce automation.
+
+Examples of automation:
+- Flows
+- Workflow Rules
+- Process Builder
+- Scheduled automation
+- Approval processes
+
+---
+
+## Think of it as
+
+> “Which email should Salesforce automation use by default?”
+
+---
+
+# Example
+
+Suppose:
+
+A Flow automatically sends:
+
+```text
+"Your ticket has been created."
+```
+
+No human clicked send.
+
+Salesforce automation sends the email.
+
+If Process Automation email is configured as:
+
+```text
+automation@xyz.com
+```
+
+Then customer sees:
+
+```text
+From: automation@xyz.com
+```
+
+---
+
+# 2. Org-Wide Email Address
+
+Location:
+
+```text
+Setup → Org-Wide Addresses
+```
+
+These are official company email addresses that:
+- users
 - Apex
 - Flows
-- Integrations
-- Queueables
+- Email Alerts
 
-### Fields
+can explicitly send emails from.
 
-| Field | Type |
+---
+
+## Think of it as
+
+> “Which company email identities are allowed inside Salesforce?”
+
+---
+
+# Example
+
+Support agent Rahul replies to customer.
+
+Without Org-Wide Email:
+
+```text
+From: rahul@xyz.com
+```
+
+With Org-Wide Email:
+
+```text
+From: support@xyz.com
+```
+
+This looks much more professional.
+
+---
+
+# Real Company Example
+
+Suppose your company has:
+
+```text
+support@xyz.com
+hr@xyz.com
+noreply@xyz.com
+```
+
+And users:
+- Aakash
+- Rahul
+- Priya
+
+---
+
+# CASE 1 — Org-Wide Email Address
+
+## Situation
+
+Rahul is a support agent.
+
+Customer sends complaint.
+
+Rahul replies from Salesforce.
+
+---
+
+## Without Org-Wide Email
+
+Customer sees:
+
+```text
+From: rahul@xyz.com
+```
+
+Problem:
+- Looks personal
+- Bad branding
+- Customer may directly contact Rahul
+
+---
+
+## With Org-Wide Email
+
+Rahul selects:
+
+```text
+support@xyz.com
+```
+
+Now customer sees:
+
+```text
+From: support@xyz.com
+```
+
+---
+
+# KEY POINT
+
+Here:
+- A HUMAN USER is sending mail
+- They choose a company email
+
+👉 This is Org-Wide Email Address.
+
+---
+
+# CASE 2 — Process Automation Settings
+
+Suppose:
+
+When Ticket is created,
+a Flow automatically sends:
+
+```text
+"Your ticket has been created."
+```
+
+No human involved.
+
+Salesforce automation sends it.
+
+---
+
+If Process Automation email is configured as:
+
+```text
+automation@xyz.com
+```
+
+Customer sees:
+
+```text
+From: automation@xyz.com
+```
+
+---
+
+# KEY POINT
+
+Here:
+- No user involved
+- Salesforce automation sends the email
+
+👉 This is Process Automation Settings.
+
+---
+
+# Important Relationship Between Them
+
+Sometimes a Flow/Apex email can:
+- explicitly use an Org-Wide Email Address
+OR
+- fall back to the Process Automation email
+
+---
+
+# Flow Decision Tree
+
+```text
+Did developer/admin explicitly choose Org-Wide Email?
+          |
+        YES
+          |
+Use that email (support@xyz.com)
+
+          |
+         NO
+          |
+Use Process Automation email
+(automation@xyz.com)
+```
+
+---
+
+# Important Verification Rule
+
+A very important point:
+
+❌ You cannot reliably use random unverified emails in Process Automation Settings.
+
+The email should:
+1. Exist as a valid email
+2. Usually be verified
+3. Must added as an Org-Wide Email Address
+
+---
+
+# Example
+
+Suppose you enter:
+
+```text
+fakeemail@xyz.com
+```
+
+in Process Automation Settings.
+
+But:
+- email does not exist
+- or is not verified
+- or not configured properly
+
+Then:
+- Salesforce may fail sending emails
+- emails may go to spam
+- or Salesforce may not allow proper usage
+
+---
+
+# Best Practice
+
+Always:
+
+1. Add email in:
+```text
+Setup → Org-Wide Email Addresses
+```
+
+2. Verify the email
+
+3. Then use it in:
+```text
+Process Automation Settings
+```
+
+---
+
+# Best Practice Architecture
+
+| Use Case | Recommended |
 |---|---|
-| Error_Message__c | Long Text |
-| Stack_Trace__c | Long Text |
-| Apex_Class__c | Text |
-| Flow_Name__c | Text |
-| Severity__c | Picklist |
-| Occurred_At__c | DateTime |
+| Customer support emails | Org-Wide Email |
+| HR emails | Org-Wide Email |
+| Invoice emails | Org-Wide Email |
+| Generic automation notifications | Process Automation |
+| Flow fallback sender | Process Automation |
 
 ---
 
-# Enterprise Architecture Decisions Completed
+# Simplest Memory Trick
 
-## Security Model
-
-- Private sharing model
-- Apex-managed sharing
-- Team-based collaboration access
-
-## Incident Architecture
-
-- Queue-first ownership
-- Major incident grouping
-- SLA tracking
-- Escalation management
-
-## Observability
-
-- Centralized error logging
-- Audit-driven SLA logs
-- Escalation traceability
-
-## Scalability Foundations
-
-- Modular object design
-- Enterprise-grade sharing model
-- Future-ready automation architecture
-
----
-
-# Current Status Summary
-
-| Module | Status |
+| Feature | Meaning |
 |---|---|
-| Project Setup | Completed |
-| Branch Strategy | Completed |
-| Org Authorization | Completed |
-| Core Data Model | Completed |
-| Security Architecture | Completed |
-| Sharing Design | Completed |
-| Incident Team Model | Completed |
-| SLA Architecture | Completed |
-| Escalation Tracking | Completed |
-| Error Observability | Completed |
+| Org-Wide Email | “Official selectable company email” |
+| Process Automation Email | “Default automation/robot sender” |
 
 ---
 
-# Custom Metadata Types (CMDT)
+# Final One-Line Difference
 
-| Metadata | Purpose |
+| Feature | Purpose |
 |---|---|
-| SLA_Config__mdt | SLA timings |
-| Escalation_Config__mdt | Escalation rules |
-| Pattern_Detection_Config__mdt | AI thresholds |
-| Incident_Team_Config__mdt | Auto team assembly |
-
----
-
-# Additional Changes
-
-Added the following fields in `Incident__c`:
-
-- Status
-- Assigned_To__c
-
----
-
-# Validation Rules
-
-## 1. Resolution_Notes_Required
-
-### Navigation
-
-```text
-Object Manager
-→ Incident__c
-→ Validation Rules
-→ New
-```
-![alt text](./imageAsset/image.png)
-### Rule
-
-```sql
-AND(
-    OR(
-        ISPICKVAL(Status__c, "Resolved"),
-        ISPICKVAL(Status__c, "Closed")
-    ),
-    ISBLANK(Resolution_Notes__c)
-)
-```
-
-### Notes
-
-We have an option for:
-
-- Showing error on field
-- Showing overall page-level error
-
-If validation rule returns:
-
-```text
-TRUE
-```
-
-then validation fails.
-
----
-
-## 2. Prevent_Self_Assignment_For_Critical
-
-### Navigation
-
-```text
-Object Manager
-→ Incident__c
-→ Validation Rules
-→ New
-```
-
-### Rule
-
-```sql
-AND(
-    ISPICKVAL(Priority__c, "Critical"),
-    Assigned_To__c = CreatedById
-)
-```
-
----
-
-## 3. Root_Cause_Required
-
-### Navigation
-
-```text
-Object Manager
-→ Major_Incident__c
-→ Validation Rules
-→ New
-```
-
-### Rule
-
-```sql
-AND(
-    ISPICKVAL(Status__c, "Closed"),
-    ISBLANK(Root_Cause__c)
-)
-```
-
----
-
-## 4. Justification_Required
-
-### Navigation
-
-```text
-Object Manager
-→ Asset_Request__c
-→ Validation Rules
-→ New
-```
-
-### Rule
-
-```sql
-ISBLANK(Justification__c)
-```
-
----
-
-# Important Interview Point
-
-Validation Rules run:
-
-- BEFORE save
-- BEFORE Apex Triggers
-
-Very important Salesforce concept.
+| Org-Wide Email | Explicit business email identity |
+| Process Automation Email | Default sender for Salesforce automation |

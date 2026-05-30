@@ -1,0 +1,22 @@
+<template>
+    <lightning-tabset>
+        <lightning-tab label="My Tickets">
+           <lightning-datatable
+            key-field="Id"
+            data={myTickets}
+            columns={columns}
+           >
+           </lightning-datatable>
+        </lightning-tab>
+        <lightning-tab label="Queue Tickets">
+            <lightning-datatable
+            key-field="Id"
+            data={queueTickets}
+            columns={queueColumns}
+            onrowaction={handleRowAction}
+           >
+           </lightning-datatable>
+        </lightning-tab>
+    </lightning-tabset>
+    <lightning-flow onstatuschange={handleStatusChange}></lightning-flow>
+</template>
