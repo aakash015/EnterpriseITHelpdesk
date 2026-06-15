@@ -30,7 +30,9 @@ export default class TicketWorkspace extends LightningElement {
     columns = COLUMNS;
     queueColumns = QueueColumns;
     myTickets = [];
+    selectedRowIds = [];
     queueTickets = [];
+    selectedRows = null;
 
     connectedCallback(){
         this.subscribeToTicketUpdates();
@@ -111,5 +113,22 @@ export default class TicketWorkspace extends LightningElement {
         refreshApex(this.wiredMyTickets);
     }
 
+    handleRowSelection(event){
+        console.log('Selected rows:', event.detail.selectedRows);
+        if(event.detail.selectedRows.length === 0){
+            this.selectedRows = null; 
+            return;
+        }
+
+        this.selectedRows = event.detail.selectedRows || []; 
+        this.selectedRowIds = this.selectedRows.map( row => row.Id);
+    }
+
+    handleCreateMajorIncident() {
+        console.log(
+            'Selected Ticket IDs',
+            JSON.stringify(this.selectedRowIds)
+        );
+    }
     
 }
