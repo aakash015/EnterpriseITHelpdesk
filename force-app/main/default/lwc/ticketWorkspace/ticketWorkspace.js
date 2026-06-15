@@ -4,6 +4,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { LightningElement, wire } from 'lwc';
 import {refreshApex} from '@salesforce/apex';
 import { subscribe } from 'lightning/empApi';
+import createMajorIncident from '@salesforce/apex/MajorIncidentService.createMajorIncident';
 
 const actions = [
     {label : "Assign To Me" , name : 'assign_to_me'}
@@ -124,11 +125,41 @@ export default class TicketWorkspace extends LightningElement {
         this.selectedRowIds = this.selectedRows.map( row => row.Id);
     }
 
-    handleCreateMajorIncident() {
-        console.log(
-            'Selected Ticket IDs',
-            JSON.stringify(this.selectedRowIds)
-        );
+    async handleCreateMajorIncident(){
+
+        try{
+    
+            const majorIncidentId =
+                await createMajorIncident({
+                    ticketIds : this.selectedRowIds
+                });
+    
+            console.log(
+                'Created Major Incident',
+                majorIncidentId
+            );
+    
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title : 'Success',
+                    message : 'Major Incident Created',
+                    variant : 'success'
+                })
+            );
+    
+        }
+        catch(error){
+    
+            console.error(error);
+    
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title : 'Error',
+                    message : error.body.message,
+                    variant : 'error'
+                })
+            );
+        }
     }
     
 }
