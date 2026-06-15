@@ -9,11 +9,19 @@
            </lightning-datatable>
         </lightning-tab>
         <lightning-tab label="Queue Tickets">
+            <template lwc:if={selectedRows}>
+            <lightning-button label="Create Major Incident"
+             onclick={handleCreateMajorIncident}
+            >
+            </lightning-button>
+        </template>
+            <br />
             <lightning-datatable
             key-field="Id"
             data={queueTickets}
             columns={queueColumns}
             onrowaction={handleRowAction}
+            onrowselection={handleRowSelection}
            >
            </lightning-datatable>
         </lightning-tab>

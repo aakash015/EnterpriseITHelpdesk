@@ -16,6 +16,11 @@ public  class TicketTransitionService {
 
 
     private static Boolean isTransitionAllowed(string oldStatus , string newStatus){
+
+        if(oldStatus == newStatus){
+          return true ;
+        }
+            
         if(oldStatus == 'Open' && newStatus == 'In Progress'){
             return true;
         } else if(oldStatus == 'In Progress' && newStatus == 'Closed'){

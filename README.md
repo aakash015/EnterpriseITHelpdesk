@@ -616,3 +616,9 @@ Process Automation Settings
 |---|---|
 | Org-Wide Email | Explicit business email identity |
 | Process Automation Email | Default sender for Salesforce automation |
+
+
+# Trigger
+Currently Implemented a Trigger in which user is unable to move ticket from a open to closed directly 
+Only few transition methods are allowed 
+
